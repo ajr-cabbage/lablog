@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	m := NewModel()
+	m := NewMainModel()
 	p := tea.NewProgram(m)
 	_, err := p.Run()
 	if err != nil {
