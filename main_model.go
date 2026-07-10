@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -18,6 +16,7 @@ type MainModel struct {
 	state        ViewState
 	listViewMod  tea.Model
 	entryViewMod tea.Model
+	quitting     bool
 }
 
 func NewMainModel() *MainModel {
@@ -43,11 +42,18 @@ func (m *MainModel) Init() tea.Cmd {
 // TODO: handle global events then switch events to child model update funcs
 func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	switch msg {
-	case tea.KeyCtrlC:
-		os.Exit(0)
-	case tea.KeyEsc:
-		m.state = listView
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			m.quitting = true
+			return m, tea.Quit
+		case "esc":
+			if m.state == entryView {
+				m.state = listView
+			}
+			return m, nil
+		}
 	}
 	// pass message to active sub model
 	switch m.state {
@@ -64,6 +70,9 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m MainModel) View() string {
+	if m.quitting {
+		return ""
+	}
 	switch m.state {
 	case entryView:
 		return m.entryViewMod.View()

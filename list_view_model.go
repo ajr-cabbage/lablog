@@ -34,6 +34,21 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !l.loaded {
 			l.loaded = true
 		}
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "right", "l":
+			if l.focused == userMachines {
+				l.focused = servers
+			} else {
+				l.focused++
+			}
+		case "left", "h":
+			if l.focused == servers {
+				l.focused = userMachines
+			} else {
+				l.focused--
+			}
+		}
 	}
 	var cmd tea.Cmd
 	l.lists[l.focused], cmd = l.lists[l.focused].Update(msg)
@@ -59,21 +74,22 @@ func NewListViewModel() *ListViewModel {
 
 // dummy initial data for testing
 func (l *ListViewModel) initLists(width, height int) {
-	defaultList := list.New([]list.Item{}, list.NewDefaultDelegate(), width, height)
+	// TODO: Define custom delegate with more fields to display (ip, online, etc)
+	defaultList := list.New([]list.Item{}, CustomDelegate{}, width, height)
 	defaultList.SetShowHelp(false)
 	l.lists = []list.Model{defaultList, defaultList, defaultList}
 	l.lists[servers].Title = "Servers"
 	l.lists[servers].SetItems([]list.Item{
-		Entry{friendlyName: "NAS", hostName: "thatnas", ipAddress: "123.255.255.122", desccription: "stores the files", online: true},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", desccription: "runs the apps", online: true},
+		Entry{friendlyName: "NAS", hostName: "thatnas", ipAddress: "123.255.255.122", description: "stores the files", online: true},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
 	})
 	l.lists[networkHardware].Title = "Network Hardware"
 	l.lists[networkHardware].SetItems([]list.Item{
-		Entry{friendlyName: "Router/Gateway", hostName: "gateway", ipAddress: "192.168.1.0", desccription: "ISP router", online: true},
-		Entry{friendlyName: "Switch", hostName: "ugreen-2.5g", ipAddress: "123.255.255.111", desccription: "High speed lan switch", online: true},
+		Entry{friendlyName: "Router/Gateway", hostName: "gateway", ipAddress: "192.168.1.0", description: "ISP router", online: true},
+		Entry{friendlyName: "Switch", hostName: "ugreen-2.5g", ipAddress: "123.255.255.111", description: "High speed lan switch", online: true},
 	})
 	l.lists[userMachines].Title = "User Devices"
 	l.lists[userMachines].SetItems([]list.Item{
-		Entry{friendlyName: "Nice PC", hostName: "framework", ipAddress: "192.168.1.55", desccription: "very fast desktop", online: true},
+		Entry{friendlyName: "Nice PC", hostName: "framework", ipAddress: "192.168.1.55", description: "very fast desktop", online: true},
 	})
 }
