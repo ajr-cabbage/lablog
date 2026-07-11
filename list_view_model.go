@@ -30,19 +30,24 @@ func (l *ListViewModel) Init() tea.Cmd {
 func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		l.initLists(msg.Width, msg.Height)
 		if !l.loaded {
+			l.initLists(msg.Width, msg.Height)
 			l.loaded = true
+		} else {
+			for i := range l.lists {
+				l.lists[i].SetWidth(msg.Width/3 - 2)
+				l.lists[i].SetHeight(msg.Height)
+			}
 		}
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "right", "l":
+		case "right":
 			if l.focused == userMachines {
 				l.focused = servers
 			} else {
 				l.focused++
 			}
-		case "left", "h":
+		case "left":
 			if l.focused == servers {
 				l.focused = userMachines
 			} else {
@@ -50,6 +55,7 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
+
 	var cmd tea.Cmd
 	l.lists[l.focused], cmd = l.lists[l.focused].Update(msg)
 	return l, cmd
@@ -59,8 +65,8 @@ func (l ListViewModel) View() string {
 	if l.loaded {
 		return lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			l.lists[servers].View(),
-			l.lists[networkHardware].View(),
+			l.lists[servers].View(), " ",
+			l.lists[networkHardware].View(), " ",
 			l.lists[userMachines].View(),
 		)
 	} else {
@@ -74,13 +80,25 @@ func NewListViewModel() *ListViewModel {
 
 // dummy initial data for testing
 func (l *ListViewModel) initLists(width, height int) {
-	// TODO: Define custom delegate with more fields to display (ip, online, etc)
-	defaultList := list.New([]list.Item{}, CustomDelegate{}, width, height)
+	listWidth := width/3 - 2
+	listWidth = max(listWidth, 10)
+	d := list.NewDefaultDelegate()
+	d.SetHeight(3)
+	// d.Styles.SelectedDesc = d.Styles.NormalDesc
+	defaultList := list.New([]list.Item{}, d, listWidth, height)
 	defaultList.SetShowHelp(false)
 	l.lists = []list.Model{defaultList, defaultList, defaultList}
 	l.lists[servers].Title = "Servers"
 	l.lists[servers].SetItems([]list.Item{
 		Entry{friendlyName: "NAS", hostName: "thatnas", ipAddress: "123.255.255.122", description: "stores the files", online: true},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
+		Entry{friendlyName: "NAS", hostName: "thatnas", ipAddress: "123.255.255.122", description: "stores the files", online: true},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
+		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
 		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
 	})
 	l.lists[networkHardware].Title = "Network Hardware"
