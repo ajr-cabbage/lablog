@@ -18,17 +18,8 @@ func (m *EntryViewModel) Init() tea.Cmd {
 }
 
 func (m *EntryViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
-	case tea.KeyMsg:
-		if !m.loaded {
-			m.initEntry()
-			m.loaded = true
-			return m, nil
-		}
-		return m, nil
-	default:
-		return m, nil
-	}
+	m.initEntry()
+	return m, nil
 }
 
 func (m EntryViewModel) View() string {
