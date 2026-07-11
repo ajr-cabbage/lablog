@@ -42,17 +42,21 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "right":
+			l.lists[l.focused].SetDelegate(NewCustomDelegate(false))
 			if l.focused == userMachines {
 				l.focused = servers
 			} else {
 				l.focused++
 			}
+			l.lists[l.focused].SetDelegate(NewCustomDelegate(true))
 		case "left":
+			l.lists[l.focused].SetDelegate(NewCustomDelegate(false))
 			if l.focused == servers {
 				l.focused = userMachines
 			} else {
 				l.focused--
 			}
+			l.lists[l.focused].SetDelegate(NewCustomDelegate(true))
 		}
 	}
 
@@ -78,16 +82,41 @@ func NewListViewModel() *ListViewModel {
 	return &ListViewModel{}
 }
 
+func NewCustomDelegate(focused bool) list.DefaultDelegate {
+	// define styles per condition
+	listFocusedItemStyles := list.NewDefaultItemStyles()
+	listNotFocusedItemStyles := list.DefaultItemStyles{
+		NormalTitle:   lipgloss.NewStyle().Foreground(lipgloss.Color("#dddddd")).Padding(0, 0, 0, 2),
+		SelectedTitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#dddddd")).Padding(0, 0, 0, 2),
+		NormalDesc:    lipgloss.NewStyle().Foreground(lipgloss.Color("#A49FA5")).Padding(0, 0, 0, 2),
+		SelectedDesc:  lipgloss.NewStyle().Foreground(lipgloss.Color("#A49FA5")).Padding(0, 0, 0, 2),
+	}
+	// init delegate
+	customDelegate := list.NewDefaultDelegate()
+	customDelegate.SetHeight(3)
+	// apply correct style
+	if focused {
+		customDelegate.Styles = listFocusedItemStyles
+	} else {
+		customDelegate.Styles = listNotFocusedItemStyles
+	}
+	return customDelegate
+}
+
 // dummy initial data for testing
 func (l *ListViewModel) initLists(width, height int) {
 	listWidth := width/3 - 2
 	listWidth = max(listWidth, 10)
-	d := list.NewDefaultDelegate()
-	d.SetHeight(3)
+	focusedDelegate := NewCustomDelegate(true)
+	notFocusedDelegate := NewCustomDelegate(false)
 	// d.Styles.SelectedDesc = d.Styles.NormalDesc
-	defaultList := list.New([]list.Item{}, d, listWidth, height)
-	defaultList.SetShowHelp(false)
-	l.lists = []list.Model{defaultList, defaultList, defaultList}
+	serversList := list.New([]list.Item{}, focusedDelegate, listWidth, height)
+	serversList.SetShowHelp(false)
+	networkList := list.New([]list.Item{}, notFocusedDelegate, listWidth, height)
+	networkList.SetShowHelp(false)
+	userList := list.New([]list.Item{}, notFocusedDelegate, listWidth, height)
+	userList.SetShowHelp(false)
+	l.lists = []list.Model{serversList, networkList, userList}
 	l.lists[servers].Title = "Servers"
 	l.lists[servers].SetItems([]list.Item{
 		Entry{friendlyName: "NAS", hostName: "thatnas", ipAddress: "123.255.255.122", description: "stores the files", online: true},
@@ -109,5 +138,6 @@ func (l *ListViewModel) initLists(width, height int) {
 	l.lists[userMachines].Title = "User Devices"
 	l.lists[userMachines].SetItems([]list.Item{
 		Entry{friendlyName: "Nice PC", hostName: "framework", ipAddress: "192.168.1.55", description: "very fast desktop", online: true},
+		Entry{friendlyName: "Windows PC :(", hostName: "alex-work", ipAddress: "192.168.1.99", description: "slow work laptop", online: false},
 	})
 }

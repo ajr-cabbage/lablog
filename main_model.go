@@ -22,7 +22,8 @@ type MainModel struct {
 func NewMainModel() *MainModel {
 	var m MainModel
 	m.listViewMod = NewListViewModel()
-	m.entryViewMod = NewEntryViewModel()
+	lvMod, _ := m.listViewMod.(*ListViewModel)
+	m.entryViewMod = NewEntryViewModel(lvMod)
 	m.state = listView
 	return &m
 }
@@ -30,18 +31,12 @@ func NewMainModel() *MainModel {
 // Implement tea.Model interface
 // TODO: define individual model inits before batching.
 func (m *MainModel) Init() tea.Cmd {
-	/*
-		return tea.Batch(
-			m.listViewMod.Init(),
-			m.entryViewMod.Init(),
-		)
-	*/
 	return nil
 }
 
-// TODO: handle global events then switch events to child model update funcs
 func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	// global key events
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -53,6 +48,10 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = listView
 			}
 			return m, nil
+		case "enter":
+			if m.state == listView {
+				m.state = entryView
+			}
 		}
 	}
 	// pass message to active sub model
