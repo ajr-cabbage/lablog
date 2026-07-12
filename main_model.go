@@ -10,12 +10,14 @@ type ViewState int
 const (
 	listView ViewState = iota
 	entryView
+	formView
 )
 
 type MainModel struct {
 	state        ViewState
 	listViewMod  tea.Model
 	entryViewMod tea.Model
+	formViewMod  tea.Model
 	quitting     bool
 }
 
@@ -24,6 +26,7 @@ func NewMainModel() *MainModel {
 	m.listViewMod = NewListViewModel()
 	lvMod, _ := m.listViewMod.(*ListViewModel)
 	m.entryViewMod = NewEntryViewModel(lvMod)
+	m.formViewMod = NewFormViewModel()
 	m.state = listView
 	return &m
 }
@@ -40,17 +43,30 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c", "ctrl+q":
 			m.quitting = true
 			return m, tea.Quit
+		case "q":
+			if m.state != formView {
+				m.quitting = true
+				return m, tea.Quit
+			}
 		case "esc":
-			if m.state == entryView {
+			if m.state != listView {
 				m.state = listView
 			}
 			return m, nil
 		case "enter":
 			if m.state == listView {
 				m.state = entryView
+			}
+		case "+":
+			if m.state == listView {
+				m.state = formView
+				f, ok := m.formViewMod.(*FormViewModel)
+				if ok {
+					f.initForm()
+				}
 			}
 		}
 	}
@@ -64,17 +80,24 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newEntryMod, newCmd := m.entryViewMod.Update(msg)
 		m.entryViewMod = newEntryMod
 		cmd = newCmd
+	case formView:
+		newFormMod, newCmd := m.formViewMod.Update(msg)
+		m.formViewMod = newFormMod
+		cmd = newCmd
 	}
 	return m, cmd
 }
 
 func (m MainModel) View() string {
+	// skip final render
 	if m.quitting {
 		return ""
 	}
 	switch m.state {
 	case entryView:
 		return m.entryViewMod.View()
+	case formView:
+		return m.formViewMod.View()
 	default:
 		return m.listViewMod.View()
 	}

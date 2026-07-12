@@ -59,12 +59,12 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			l.lists[l.focused].SetDelegate(NewCustomDelegate(true))
 		}
 	}
-
 	var cmd tea.Cmd
 	l.lists[l.focused], cmd = l.lists[l.focused].Update(msg)
 	return l, cmd
 }
 
+// combine list models
 func (l ListViewModel) View() string {
 	if l.loaded {
 		return lipgloss.JoinHorizontal(
@@ -82,6 +82,7 @@ func NewListViewModel() *ListViewModel {
 	return &ListViewModel{}
 }
 
+// Override default delegate styles and provide alt styles for unfocused lists
 func NewCustomDelegate(focused bool) list.DefaultDelegate {
 	// define styles per condition
 	listFocusedItemStyles := list.NewDefaultItemStyles()

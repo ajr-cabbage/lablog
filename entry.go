@@ -25,7 +25,7 @@ func (e Entry) Title() string {
 
 func (e Entry) Description() string {
 	var output string
-
+	// custom output style
 	if e.online {
 		output = fmt.Sprintf(
 			"%s\n%s",
