@@ -1,19 +1,20 @@
 package main
 
 import (
-	"fmt"
-
+	"github.com/ajr-cabbage/lablog/internal/database"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 )
 
 type FormViewModel struct {
 	form *huh.Form
+	db   *database.Queries
 }
 
-func NewFormViewModel() *FormViewModel {
+func NewFormViewModel(db *database.Queries) *FormViewModel {
 	newFormMod := FormViewModel{}
 	newFormMod.initForm()
+	newFormMod.db = db
 	return &newFormMod
 }
 
@@ -27,23 +28,22 @@ func (f *FormViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if huhForm, ok := formMod.(*huh.Form); ok {
 		f.form = huhForm
 	}
-
 	return f, cmd
 }
 
 func (f FormViewModel) View() string {
-	if f.form.State == huh.StateCompleted {
-		return fmt.Sprintf("Entry Added: %s", f.form.GetString("friendlyName"))
-	}
 	return f.form.View()
 }
 
 func (f *FormViewModel) initForm() {
 	f.form = huh.NewForm(
 		huh.NewGroup(
-			huh.NewSelect[string]().
+			huh.NewSelect[category]().
 				Key("category").
-				Options(huh.NewOptions("Server", "Network Hardware", "User Device")...).
+				Options(huh.NewOption("Server", servers),
+					huh.NewOption("Network Hardware", networkHardware),
+					huh.NewOption("User Device", userMachines),
+				).
 				Title("Choose a Category"),
 			huh.NewInput().
 				Title("Friendly Name").

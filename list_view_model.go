@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/ajr-cabbage/lablog/internal/database"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,6 +23,7 @@ type ListViewModel struct {
 	lists   []list.Model
 	focused category
 	loaded  bool
+	db      *database.Queries
 }
 
 // Implement tea.Model interface
@@ -57,6 +62,8 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				l.focused--
 			}
 			l.lists[l.focused].SetDelegate(NewCustomDelegate(true))
+		case "r": // refresh whenever returning to list view
+			return l, l.refreshList()
 		}
 	}
 	var cmd tea.Cmd
@@ -78,8 +85,8 @@ func (l ListViewModel) View() string {
 	}
 }
 
-func NewListViewModel() *ListViewModel {
-	return &ListViewModel{}
+func NewListViewModel(db *database.Queries) *ListViewModel {
+	return &ListViewModel{db: db}
 }
 
 // Override default delegate styles and provide alt styles for unfocused lists
@@ -104,7 +111,7 @@ func NewCustomDelegate(focused bool) list.DefaultDelegate {
 	return customDelegate
 }
 
-// dummy initial data for testing
+// initialize styles and refresh() data from database
 func (l *ListViewModel) initLists(width, height int) {
 	listWidth := width/3 - 2
 	listWidth = max(listWidth, 10)
@@ -118,27 +125,42 @@ func (l *ListViewModel) initLists(width, height int) {
 	userList := list.New([]list.Item{}, notFocusedDelegate, listWidth, height)
 	userList.SetShowHelp(false)
 	l.lists = []list.Model{serversList, networkList, userList}
-	l.lists[servers].Title = "Servers"
-	l.lists[servers].SetItems([]list.Item{
-		Entry{friendlyName: "NAS", hostName: "thatnas", ipAddress: "123.255.255.122", description: "stores the files", online: true},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-		Entry{friendlyName: "NAS", hostName: "thatnas", ipAddress: "123.255.255.122", description: "stores the files", online: true},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-		Entry{friendlyName: "App Server", hostName: "app-lord", ipAddress: "123.255.255.120", description: "runs the apps", online: false},
-	})
-	l.lists[networkHardware].Title = "Network Hardware"
-	l.lists[networkHardware].SetItems([]list.Item{
-		Entry{friendlyName: "Router/Gateway", hostName: "gateway", ipAddress: "192.168.1.0", description: "ISP router", online: true},
-		Entry{friendlyName: "Switch", hostName: "ugreen-2.5g", ipAddress: "123.255.255.111", description: "High speed lan switch", online: true},
-	})
-	l.lists[userMachines].Title = "User Devices"
-	l.lists[userMachines].SetItems([]list.Item{
-		Entry{friendlyName: "Nice PC", hostName: "framework", ipAddress: "192.168.1.55", description: "very fast desktop", online: true},
-		Entry{friendlyName: "Windows PC :(", hostName: "alex-work", ipAddress: "192.168.1.99", description: "slow work laptop", online: false},
-	})
+	l.refreshList()
+}
+
+func (l *ListViewModel) refreshList() tea.Cmd {
+	categories := []category{servers, networkHardware, userMachines}
+	var cmds []tea.Cmd
+	for _, cat := range categories {
+		switch cat {
+		case servers:
+			l.lists[cat].Title = "Servers"
+		case networkHardware:
+			l.lists[cat].Title = "Network Hardware"
+		case userMachines:
+			l.lists[cat].Title = "User Devices"
+		}
+
+		dbEntries, err := l.db.GetEntriesByCategory(context.Background(), int64(cat))
+		if err != nil {
+			fmt.Println(err)
+		}
+		var newItems []list.Item
+		for _, entry := range dbEntries {
+			//TODO: tie online field to ping result
+			rawListEntry := Entry{
+				id:           int(entry.ID),
+				friendlyName: entry.FriendlyName,
+				hostName:     entry.HostName,
+				description:  entry.Description,
+				ipAddress:    entry.IpAddress,
+				online:       true,
+			}
+			newItems = append(newItems, rawListEntry)
+		}
+		cmd := l.lists[cat].SetItems(newItems)
+		cmds = append(cmds, cmd)
+	}
+
+	return tea.Batch(cmds...)
 }

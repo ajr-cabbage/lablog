@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
+
+	"github.com/ajr-cabbage/lablog/internal/database"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 )
 
 // Possible Views
@@ -19,15 +23,17 @@ type MainModel struct {
 	entryViewMod tea.Model
 	formViewMod  tea.Model
 	quitting     bool
+	db           *database.Queries
 }
 
-func NewMainModel() *MainModel {
+func NewMainModel(db *database.Queries) *MainModel {
 	var m MainModel
-	m.listViewMod = NewListViewModel()
+	m.listViewMod = NewListViewModel(db)
 	lvMod, _ := m.listViewMod.(*ListViewModel)
 	m.entryViewMod = NewEntryViewModel(lvMod)
-	m.formViewMod = NewFormViewModel()
+	m.formViewMod = NewFormViewModel(db)
 	m.state = listView
+	m.db = db
 	return &m
 }
 
@@ -82,8 +88,47 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd = newCmd
 	case formView:
 		newFormMod, newCmd := m.formViewMod.Update(msg)
-		m.formViewMod = newFormMod
+		f, ok := newFormMod.(*FormViewModel)
+		if ok {
+			m.formViewMod = f
+		}
 		cmd = newCmd
+		if f.form.State == huh.StateCompleted {
+			rawCategory := f.form.Get("category")
+			newCategory, ok := rawCategory.(category)
+			if !ok {
+				//return "unable to type assert category"
+			}
+			rawFriendlyName := f.form.Get("friendlyName")
+			newFriendlyName, ok := rawFriendlyName.(string)
+			if !ok {
+				//return "unable to type assert friendlyName"
+			}
+			rawHostName := f.form.Get("hostName")
+			newHostName, ok := rawHostName.(string)
+			if !ok {
+				//return "unable to type assert hostName"
+			}
+			rawDescription := f.form.Get("description")
+			newDescription, ok := rawDescription.(string)
+			if !ok {
+				//return "unable to type assert friendlyName"
+			}
+			rawIPAddress := f.form.Get("ipAddress")
+			newIPAddress, ok := rawIPAddress.(string)
+			if !ok {
+				//return "unable to type assert friendlyName"
+			}
+			entryParams := database.CreateEntryParams{
+				Category:     int64(newCategory),
+				FriendlyName: newFriendlyName,
+				HostName:     newHostName,
+				Description:  newDescription,
+				IpAddress:    newIPAddress,
+			}
+			f.db.CreateEntry(context.Background(), entryParams)
+			m.state = listView
+		}
 	}
 	return m, cmd
 }

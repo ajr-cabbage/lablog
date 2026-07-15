@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/ajr-cabbage/lablog/internal/database"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
@@ -23,14 +24,18 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
+	dbQueries := database.New(db)
+	// apply up migration
 	err = goose.SetDialect("sqlite")
 	if err != nil {
 		log.Fatal(err)
 	}
 	err = goose.Up(db, "sql/schema")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	m := NewMainModel()
+	m := NewMainModel(dbQueries)
 	p := tea.NewProgram(m)
 	_, err = p.Run()
 	if err != nil {

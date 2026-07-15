@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,6 +11,7 @@ type EntryViewModel struct {
 	entry       Entry
 	parentModel *ListViewModel
 	loaded      bool
+	db          *sql.DB
 }
 
 // Implement tea.Model interface

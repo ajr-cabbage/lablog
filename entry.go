@@ -7,6 +7,7 @@ import (
 )
 
 type Entry struct {
+	id           int
 	friendlyName string
 	hostName     string
 	description  string
