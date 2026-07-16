@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-
 	"github.com/ajr-cabbage/lablog/internal/database"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -44,7 +42,7 @@ func (m *MainModel) Init() tea.Cmd {
 }
 
 func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	// global key events
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -71,7 +69,23 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = formView
 				f, ok := m.formViewMod.(*FormViewModel)
 				if ok {
-					f.initForm()
+					f.initForm(m, InsertForm)
+				}
+			}
+		case "delete":
+			if m.state == listView {
+				m.state = formView
+				f, ok := m.formViewMod.(*FormViewModel)
+				if ok {
+					f.initForm(m, DeleteForm)
+				}
+			}
+		case "u":
+			if m.state == listView {
+				m.state = formView
+				f, ok := m.formViewMod.(*FormViewModel)
+				if ok {
+					f.initForm(m, EditForm)
 				}
 			}
 		}
@@ -81,56 +95,30 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case listView:
 		newListMod, newCmd := m.listViewMod.Update(msg)
 		m.listViewMod = newListMod
-		cmd = newCmd
+		cmds = append(cmds, newCmd)
 	case entryView:
 		newEntryMod, newCmd := m.entryViewMod.Update(msg)
 		m.entryViewMod = newEntryMod
-		cmd = newCmd
+		cmds = append(cmds, newCmd)
 	case formView:
 		newFormMod, newCmd := m.formViewMod.Update(msg)
 		f, ok := newFormMod.(*FormViewModel)
 		if ok {
 			m.formViewMod = f
 		}
-		cmd = newCmd
+		cmds = append(cmds, newCmd)
 		if f.form.State == huh.StateCompleted {
-			rawCategory := f.form.Get("category")
-			newCategory, ok := rawCategory.(category)
-			if !ok {
-				//return "unable to type assert category"
+			switch f.formType {
+			case InsertForm:
+				addEntryHandler(m, f)
+			case DeleteForm:
+				deleteEntryHandler(m, f)
+			case EditForm:
+				editEntryHandler(m, f)
 			}
-			rawFriendlyName := f.form.Get("friendlyName")
-			newFriendlyName, ok := rawFriendlyName.(string)
-			if !ok {
-				//return "unable to type assert friendlyName"
-			}
-			rawHostName := f.form.Get("hostName")
-			newHostName, ok := rawHostName.(string)
-			if !ok {
-				//return "unable to type assert hostName"
-			}
-			rawDescription := f.form.Get("description")
-			newDescription, ok := rawDescription.(string)
-			if !ok {
-				//return "unable to type assert friendlyName"
-			}
-			rawIPAddress := f.form.Get("ipAddress")
-			newIPAddress, ok := rawIPAddress.(string)
-			if !ok {
-				//return "unable to type assert friendlyName"
-			}
-			entryParams := database.CreateEntryParams{
-				Category:     int64(newCategory),
-				FriendlyName: newFriendlyName,
-				HostName:     newHostName,
-				Description:  newDescription,
-				IpAddress:    newIPAddress,
-			}
-			f.db.CreateEntry(context.Background(), entryParams)
-			m.state = listView
 		}
 	}
-	return m, cmd
+	return m, tea.Batch(cmds...)
 }
 
 func (m MainModel) View() string {

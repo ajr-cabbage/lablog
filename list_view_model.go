@@ -62,8 +62,8 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				l.focused--
 			}
 			l.lists[l.focused].SetDelegate(NewCustomDelegate(true))
-		case "r": // refresh whenever returning to list view
-			return l, l.refreshList()
+		case "delete":
+
 		}
 	}
 	var cmd tea.Cmd
@@ -74,6 +74,7 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // combine list models
 func (l ListViewModel) View() string {
 	if l.loaded {
+		l.refreshList()
 		return lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			l.lists[servers].View(), " ",
