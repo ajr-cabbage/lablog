@@ -36,7 +36,6 @@ func NewMainModel(db *database.Queries) *MainModel {
 }
 
 // Implement tea.Model interface
-// TODO: define individual model inits before batching.
 func (m *MainModel) Init() tea.Cmd {
 	return nil
 }
@@ -80,7 +79,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					f.initForm(m, DeleteForm)
 				}
 			}
-		case "u":
+		case "u", "e":
 			if m.state == listView {
 				m.state = formView
 				f, ok := m.formViewMod.(*FormViewModel)

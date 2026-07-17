@@ -75,7 +75,56 @@ func deleteEntryHandler(m *MainModel, f *FormViewModel) error {
 	return nil
 }
 
-// TODO: implement edit db update
 func editEntryHandler(m *MainModel, f *FormViewModel) error {
+	// get form values and type assert to struct field types
+	rawCategory := f.form.Get("category")
+	newCategory, ok := rawCategory.(category)
+	if !ok {
+		return errors.New("unable to type assert category")
+	}
+	rawFriendlyName := f.form.Get("friendlyName")
+	newFriendlyName, ok := rawFriendlyName.(string)
+	if !ok {
+		return errors.New("unable to type assert friendlyName")
+	}
+	rawHostName := f.form.Get("hostName")
+	newHostName, ok := rawHostName.(string)
+	if !ok {
+		return errors.New("unable to type assert hostName")
+	}
+	rawDescription := f.form.Get("description")
+	newDescription, ok := rawDescription.(string)
+	if !ok {
+		return errors.New("unable to type assert description")
+	}
+	rawIPAddress := f.form.Get("ipAddress")
+	newIPAddress, ok := rawIPAddress.(string)
+	if !ok {
+		return errors.New("unable to type assert ipAddress")
+	}
+
+	// get focused item to fetch ID
+	currentListView, ok := m.listViewMod.(*ListViewModel)
+	if !ok {
+		return errors.New("unable to typeassert listViewModel")
+	}
+	focusedListItem, ok := currentListView.lists[currentListView.focused].Items()[currentListView.lists[currentListView.focused].Index()].(Entry)
+	if !ok {
+		return errors.New("unable to type assert list item to Entry")
+	}
+
+	editEntryParams := database.EditEntryByIDParams{
+		Category:     int64(newCategory),
+		FriendlyName: newFriendlyName,
+		HostName:     newHostName,
+		Description:  newDescription,
+		IpAddress:    newIPAddress,
+		ID:           int64(focusedListItem.id),
+	}
+	_, err := f.db.EditEntryByID(context.Background(), editEntryParams)
+	if err != nil {
+		return err
+	}
+	m.state = listView
 	return nil
 }

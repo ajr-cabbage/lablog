@@ -23,6 +23,8 @@ type ListViewModel struct {
 	lists   []list.Model
 	focused category
 	loaded  bool
+	width   int
+	height  int
 	db      *database.Queries
 }
 
@@ -62,8 +64,6 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				l.focused--
 			}
 			l.lists[l.focused].SetDelegate(NewCustomDelegate(true))
-		case "delete":
-
 		}
 	}
 	var cmd tea.Cmd
@@ -75,12 +75,12 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (l ListViewModel) View() string {
 	if l.loaded {
 		l.refreshList()
-		return lipgloss.JoinHorizontal(
-			lipgloss.Left,
+		return lipgloss.PlaceHorizontal(l.width, lipgloss.Center, lipgloss.JoinHorizontal(
+			lipgloss.Center,
 			l.lists[servers].View(), " ",
 			l.lists[networkHardware].View(), " ",
 			l.lists[userMachines].View(),
-		)
+		))
 	} else {
 		return "loading..."
 	}
@@ -114,6 +114,8 @@ func NewCustomDelegate(focused bool) list.DefaultDelegate {
 
 // initialize styles and refresh() data from database
 func (l *ListViewModel) initLists(width, height int) {
+	l.width = width
+	l.height = height
 	listWidth := width/3 - 2
 	listWidth = max(listWidth, 10)
 	focusedDelegate := NewCustomDelegate(true)

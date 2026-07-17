@@ -11,6 +11,17 @@ ORDER BY id ASC;
 SELECT * FROM entries
 WHERE ID = ?;
 
+-- name: EditEntryByID :one
+UPDATE entries
+SET
+    category = ?,
+    friendly_name = ?,
+    host_name = ?,
+    ip_address = ?,
+    description = ?
+WHERE id = ?
+RETURNING *;
+
 -- name: GetEntriesByCategory :many
 SELECT * FROM entries
 WHERE category = ?;

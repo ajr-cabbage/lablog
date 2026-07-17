@@ -53,6 +53,48 @@ func (q *Queries) DeleteEntry(ctx context.Context, id int64) error {
 	return err
 }
 
+const editEntryByID = `-- name: EditEntryByID :one
+UPDATE entries
+SET
+    category = ?,
+    friendly_name = ?,
+    host_name = ?,
+    ip_address = ?,
+    description = ?
+WHERE id = ?
+RETURNING id, category, friendly_name, host_name, ip_address, description
+`
+
+type EditEntryByIDParams struct {
+	Category     int64
+	FriendlyName string
+	HostName     string
+	IpAddress    string
+	Description  string
+	ID           int64
+}
+
+func (q *Queries) EditEntryByID(ctx context.Context, arg EditEntryByIDParams) (Entry, error) {
+	row := q.db.QueryRowContext(ctx, editEntryByID,
+		arg.Category,
+		arg.FriendlyName,
+		arg.HostName,
+		arg.IpAddress,
+		arg.Description,
+		arg.ID,
+	)
+	var i Entry
+	err := row.Scan(
+		&i.ID,
+		&i.Category,
+		&i.FriendlyName,
+		&i.HostName,
+		&i.IpAddress,
+		&i.Description,
+	)
+	return i, err
+}
+
 const getEntries = `-- name: GetEntries :many
 SELECT id, category, friendly_name, host_name, ip_address, description FROM entries
 ORDER BY id ASC

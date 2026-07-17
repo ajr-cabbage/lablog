@@ -6,6 +6,7 @@ import (
 	"github.com/ajr-cabbage/lablog/internal/database"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type FormType int
@@ -16,9 +17,29 @@ const (
 	DeleteForm
 )
 
+var (
+	AddFormStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#1c9e80")).
+			Padding(1, 2).
+			Align(lipgloss.Center)
+	EditFormStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#1d6b91")).
+			Padding(1, 2).
+			Align(lipgloss.Center)
+	DeleteFormStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#ba3c3c")).
+			Padding(1, 2).
+			Align(lipgloss.Center)
+)
+
 type FormViewModel struct {
 	form     *huh.Form
 	formType FormType
+	width    int
+	height   int
 	db       *database.Queries
 }
 
@@ -34,6 +55,11 @@ func (f *FormViewModel) Init() tea.Cmd {
 }
 
 func (f *FormViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		f.width = msg.Width
+		f.height = msg.Height
+	}
 	formMod, cmd := f.form.Update(msg)
 	if huhForm, ok := formMod.(*huh.Form); ok {
 		f.form = huhForm
@@ -42,7 +68,14 @@ func (f *FormViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (f FormViewModel) View() string {
-	return f.form.View()
+	switch f.formType {
+	case InsertForm:
+		return lipgloss.Place(f.width, f.height, lipgloss.Center, lipgloss.Center, AddFormStyle.Render(f.form.View()))
+	case EditForm:
+		return EditFormStyle.Render(f.form.View())
+	default:
+		return DeleteFormStyle.Render(f.form.View())
+	}
 }
 
 func (f *FormViewModel) initForm(m *MainModel, fType FormType) {
