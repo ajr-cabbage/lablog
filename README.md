@@ -1,6 +1,7 @@
 # lablog
 ### The simple little homelab notebook
 ![screenshot](lablog-screenshot.png)
+
 Find yourself forgetting usefull information about your home network devices? Need another CRUD app in your life? Store info here for easy access fom inside your terminal. See device online status at a glance.
 #### Requirements
  - sqlite3
