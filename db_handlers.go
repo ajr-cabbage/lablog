@@ -47,6 +47,10 @@ func addEntryHandler(m *MainModel, f *FormViewModel) error {
 		return err
 	}
 	// update state now that entry is done
+	l, ok := m.listViewMod.(*ListViewModel)
+	if ok {
+		l.refreshList()
+	}
 	m.state = listView
 	return nil
 }
@@ -70,6 +74,10 @@ func deleteEntryHandler(m *MainModel, f *FormViewModel) error {
 	err := f.db.DeleteEntry(context.Background(), int64(focusedListItem.id))
 	if err != nil {
 		return err
+	}
+	l, ok := m.listViewMod.(*ListViewModel)
+	if ok {
+		l.refreshList()
 	}
 	m.state = listView
 	return nil
@@ -124,6 +132,10 @@ func editEntryHandler(m *MainModel, f *FormViewModel) error {
 	_, err := f.db.EditEntryByID(context.Background(), editEntryParams)
 	if err != nil {
 		return err
+	}
+	l, ok := m.listViewMod.(*ListViewModel)
+	if ok {
+		l.refreshList()
 	}
 	m.state = listView
 	return nil

@@ -90,6 +90,7 @@ func (f *FormViewModel) initForm(m *MainModel, fType FormType) {
 						huh.NewOption("Server", servers),
 						huh.NewOption("Network Hardware", networkHardware),
 						huh.NewOption("User Device", userMachines),
+						huh.NewOption("Audio Device", audioDevices),
 					).
 					Title("Choose a Category"),
 				huh.NewInput().
@@ -147,6 +148,7 @@ func (f *FormViewModel) initForm(m *MainModel, fType FormType) {
 						huh.NewOption("Server", servers),
 						huh.NewOption("Network Hardware", networkHardware),
 						huh.NewOption("User Device", userMachines),
+						huh.NewOption("Audio Device", audioDevices),
 					).
 					Title("Choose a Category").
 					Value(&catDefault),

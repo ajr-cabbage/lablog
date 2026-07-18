@@ -56,6 +56,10 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "esc":
 			if m.state != listView {
+				l, ok := m.listViewMod.(*ListViewModel)
+				if ok {
+					l.refreshList()
+				}
 				m.state = listView
 			}
 			return m, nil

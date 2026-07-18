@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"sync"
 
 	"github.com/ajr-cabbage/lablog/internal/database"
 	"github.com/charmbracelet/bubbles/list"
@@ -16,6 +18,7 @@ type category int
 const (
 	servers category = iota
 	networkHardware
+	audioDevices
 	userMachines
 )
 
@@ -35,6 +38,7 @@ func (l *ListViewModel) Init() tea.Cmd {
 }
 
 func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		if !l.loaded {
@@ -66,19 +70,20 @@ func (l *ListViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			l.lists[l.focused].SetDelegate(NewCustomDelegate(true))
 		}
 	}
-	var cmd tea.Cmd
-	l.lists[l.focused], cmd = l.lists[l.focused].Update(msg)
-	return l, cmd
+	var cmdb tea.Cmd
+	l.lists[l.focused], cmdb = l.lists[l.focused].Update(msg)
+	cmds = append(cmds, cmdb)
+	return l, tea.Batch(cmds...)
 }
 
 // combine list models
 func (l ListViewModel) View() string {
 	if l.loaded {
-		l.refreshList()
 		return lipgloss.PlaceHorizontal(l.width, lipgloss.Center, lipgloss.JoinHorizontal(
-			lipgloss.Center,
+			lipgloss.Left,
 			l.lists[servers].View(), " ",
 			l.lists[networkHardware].View(), " ",
+			l.lists[audioDevices].View(), " ",
 			l.lists[userMachines].View(),
 		))
 	} else {
@@ -127,43 +132,56 @@ func (l *ListViewModel) initLists(width, height int) {
 	networkList.SetShowHelp(false)
 	userList := list.New([]list.Item{}, notFocusedDelegate, listWidth, height)
 	userList.SetShowHelp(false)
-	l.lists = []list.Model{serversList, networkList, userList}
+	audioList := list.New([]list.Item{}, notFocusedDelegate, listWidth, height)
+	audioList.SetShowHelp(false)
+	l.lists = []list.Model{serversList, networkList, audioList, userList}
 	l.refreshList()
 }
 
 func (l *ListViewModel) refreshList() tea.Cmd {
-	categories := []category{servers, networkHardware, userMachines}
+	categories := []category{servers, networkHardware, userMachines, audioDevices}
 	var cmds []tea.Cmd
+	var wg sync.WaitGroup
 	for _, cat := range categories {
-		switch cat {
-		case servers:
-			l.lists[cat].Title = "Servers"
-		case networkHardware:
-			l.lists[cat].Title = "Network Hardware"
-		case userMachines:
-			l.lists[cat].Title = "User Devices"
-		}
-
-		dbEntries, err := l.db.GetEntriesByCategory(context.Background(), int64(cat))
-		if err != nil {
-			fmt.Println(err)
-		}
-		var newItems []list.Item
-		for _, entry := range dbEntries {
-			//TODO: tie online field to ping result
-			rawListEntry := Entry{
-				id:           int(entry.ID),
-				friendlyName: entry.FriendlyName,
-				hostName:     entry.HostName,
-				description:  entry.Description,
-				ipAddress:    entry.IpAddress,
-				online:       true,
+		wg.Go(func() {
+			switch cat {
+			case servers:
+				l.lists[cat].Title = "Servers"
+			case networkHardware:
+				l.lists[cat].Title = "Network Hardware"
+			case userMachines:
+				l.lists[cat].Title = "User Devices"
+			case audioDevices:
+				l.lists[cat].Title = "Audio Devices"
 			}
-			newItems = append(newItems, rawListEntry)
-		}
-		cmd := l.lists[cat].SetItems(newItems)
-		cmds = append(cmds, cmd)
-	}
 
+			dbEntries, err := l.db.GetEntriesByCategory(context.Background(), int64(cat))
+			if err != nil {
+				fmt.Println(err)
+			}
+			var newItems []list.Item
+			for _, entry := range dbEntries {
+				// ping target IP and set online status
+				isOnline := false
+				pingCmd := exec.Command("ping", "-c", "1", "-W", "0.3", entry.IpAddress)
+				err := pingCmd.Run()
+				if err == nil {
+					isOnline = true
+				}
+				rawListEntry := Entry{
+					id:           int(entry.ID),
+					friendlyName: entry.FriendlyName,
+					hostName:     entry.HostName,
+					description:  entry.Description,
+					ipAddress:    entry.IpAddress,
+					online:       isOnline,
+				}
+				newItems = append(newItems, rawListEntry)
+			}
+			cmd := l.lists[cat].SetItems(newItems)
+			cmds = append(cmds, cmd)
+		})
+		wg.Wait()
+	}
 	return tea.Batch(cmds...)
 }
